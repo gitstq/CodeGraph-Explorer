@@ -1,0 +1,6 @@
+/* CodeGraph-Explorer Global Styles */
+:root{--primary:#00d9ff;--secondary:#00ff88;--bg:#1a1a2e}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,var(--bg),#16213e);color:#fff}
+a{color:var(--primary);text-decoration:none}
+a:hover{color:var(--secondary)}

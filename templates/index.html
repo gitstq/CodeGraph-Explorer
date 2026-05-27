@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeGraph-Explorer - 代码结构可视化工具</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;min-height:100vh;overflow:hidden}
+        .container{display:flex;height:100vh}
+        .sidebar{width:320px;background:rgba(255,255,255,.05);border-right:1px solid rgba(255,255,255,.1);padding:20px;overflow-y:auto}
+        .sidebar-header{text-align:center;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sidebar-header h1{font-size:1.5rem;background:linear-gradient(135deg,#00d9ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+        .input-section{background:rgba(255,255,255,.05);border-radius:12px;padding:16px;margin:16px 0}
+        .input-section label{display:block;font-size:.9rem;margin-bottom:8px;color:rgba(255,255,255,.8)}
+        .path-input-wrapper{display:flex;gap:8px}
+        .path-input{flex:1;padding:10px 14px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;font-size:.85rem}
+        .btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:all .3s}
+        .btn-primary{background:linear-gradient(135deg,#00d9ff,#00ff88);color:#1a1a2e}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,217,255,.3)}
+        .search-box{position:relative;margin:16px 0}
+        .search-input{width:100%;padding:10px 14px;padding-left:36px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;font-size:.85rem}
+        .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.4)}
+        .stats-section{background:rgba(255,255,255,.05);border-radius:12px;padding:16px;margin:16px 0}
+        .stats-section h3{font-size:.9rem;margin-bottom:12px;color:rgba(255,255,255,.8)}
+        .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .stat-card{background:rgba(255,255,255,.05);border-radius:8px;padding:12px;text-align:center}
+        .stat-value{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,#00d9ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .stat-label{font-size:.75rem;color:rgba(255,255,255,.5);margin-top:4px}
+        .main-content{flex:1;position:relative;overflow:hidden}
+        #graph-container{width:100%;height:100%;background:rgba(0,0,0,.2)}
+        .welcome-message{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:rgba(255,255,255,.5)}
+        .welcome-message h2{font-size:1.5rem;margin-bottom:8px;color:rgba(255,255,255,.7)}
+        .legend{position:absolute;bottom:20px;left:20px;background:rgba(0,0,0,.5);border-radius:8px;padding:12px;display:flex;gap:16px}
+        .legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:rgba(255,255,255,.7)}
+        .legend-dot{width:12px;height:12px;border-radius:50%}
+        .legend-dot.module{background:#ffd700}.legend-dot.class{background:#00d9ff}.legend-dot.function{background:#00ff88}.legend-dot.import{background:#ff6b6b}
+        .empty-state{text-align:center;padding:20px;color:rgba(255,255,255,.4)}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>🔬 CodeGraph</h1>
+                <p>代码结构可视化工具</p>
+            </div>
+            <div class="input-section">
+                <label>📁 项目路径</label>
+                <div class="path-input-wrapper">
+                    <input type="text" id="project-path" class="path-input" placeholder="输入项目路径...">
+                    <button class="btn btn-primary" onclick="parseProject()">解析</button>
+                </div>
+            </div>
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input" placeholder="搜索节点..." oninput="searchNodes()">
+            </div>
+            <div class="stats-section">
+                <h3>📊 统计概览</h3>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value" id="total-nodes">0</div><div class="stat-label">节点数</div></div>
+                    <div class="stat-card"><div class="stat-value" id="total-edges">0</div><div class="stat-label">边数</div></div>
+                </div>
+            </div>
+        </aside>
+        <main class="main-content">
+            <div id="graph-container"></div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot module"></div><span>模块</span></div>
+                <div class="legend-item"><div class="legend-dot class"></div><span>类</span></div>
+                <div class="legend-item"><div class="legend-dot function"></div><span>函数</span></div>
+                <div class="legend-item"><div class="legend-dot import"></div><span>导入</span></div>
+            </div>
+            <div id="welcome-message" class="welcome-message">
+                <h2>👋 欢迎使用 CodeGraph-Explorer</h2>
+                <p>请在上方输入项目路径并点击解析开始分析</p>
+            </div>
+        </main>
+    </div>
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <script>
+        let cy=null;
+        const nodeColors={module:'#ffd700',class:'#00d9ff',function:'#00ff88',import:'#ff6b6b',default:'#888'};
+        function initGraph(){cy=cytoscape({container:document.getElementById('graph-container'),style:[{selector:'node',style:{'background-color':'data(color)','label':'data(label)','color':'#fff','font-size':'10px','width':'data(size)','height':'data(size)','border-width':2,'border-color':'data(borderColor)'}},{selector:'edge',style:{'width':1,'line-color':'rgba(255,255,255,.2)','target-arrow-color':'rgba(255,255,255,.2)','target-arrow-shape':'triangle'}},{selector:'node:selected',style:{'border-width':3,'border-color':'#fff'}}],layout:{name:'cose',animate:true,fit:true,padding:50},wheelSensitivity:.3,minZoom:.1,maxZoom:5});cy.on('tap','node',function(e){showNodeDetail(e.target.id())})}
+        async function loadGraphData(){try{const r=await fetch('/api/graph/cytoscape');return (await r.json()).elements||[]}catch{return []}}
+        async function renderGraph(){const els=await loadGraphData();if(!els.length)return;const nodes=els.filter(e=>e.data&&!e.data.source),edges=els.filter(e=>e.data&&e.data.source),cyEls=[];nodes.forEach(n=>{const c=nodeColors[n.data.type]||nodeColors.default;cyEls.push({data:{id:n.data.id,label:n.data.label,type:n.data.type,color:c,size:n.data.type==='module'?40:n.data.type==='class'?30:20,borderColor:c}})});edges.forEach(e=>{cyEls.push({data:{id:e.data.source+'-'+e.data.target,source:e.data.source,target:e.data.target}})});cy.elements().remove();cy.add(cyEls);cy.layout({name:'cose',animate:true,fit:true,padding:50}).run();document.getElementById('welcome-message').style.display='none'}
+        async function parseProject(){const p=document.getElementById('project-path').value.trim();if(!p)return;try{const r=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});const d=await r.json();if(d.success){document.getElementById('total-nodes').textContent=d.statistics.total_nodes;document.getElementById('total-edges').textContent=d.statistics.total_edges;await renderGraph()}}catch(e){alert('解析出错')}}
+        async function searchNodes(){const q=document.getElementById('search-input').value.trim();if(!q)return;try{const r=await fetch('/api/search?q='+encodeURIComponent(q));const d=await r.json();cy.elements().removeClass('highlighted');(d.results||[]).forEach(n=>{const e=cy.getElementById(n.id);if(e.length)e.addClass('highlighted')})}}catch{}
+        async function showNodeDetail(id){try{const r=await fetch('/api/node/'+id);const d=await r.json();if(d.node){let h='<div style="padding:16px"><h3>'+d.node.name+'</h3><p>类型: '+d.node.type+'</p><p>文件: '+(d.node.file_path||'')+'</p></div>';document.getElementById('welcome-message').innerHTML=h}}catch{}}document.addEventListener('DOMContentLoaded',initGraph);
+    </script>
+</body>
+</html>
